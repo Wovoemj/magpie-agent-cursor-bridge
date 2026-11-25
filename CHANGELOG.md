@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0
+
+- 中文语言包升级到上游 `polang233/cursor-language-pack` 1.3.0（验证清单 Cursor 3.30.14），支持 `zh-cn` / `zh-tw` / `ja`，覆盖标准菜单、设置与 Agent 界面。
+- 不再因 Cursor 版本不在验证清单内而拒绝安装：新增文案可能仍为英文，但补丁、VSIX 安装与登记核对照常执行，结果中带 `verified` / `cursorVersion` 供上层提示。
+- 以 `magpie-agent-cursor-bridge` 名称发布到 npm，可在 Magpie 的插件页按名称直接搜索安装。
+- README 按插件详情页重写：元信息表、取模方式说明、为什么 Cursor 需要本地 TLS 代理、工作流、中文界面与兼容性。
+
+## 0.2.9（本机定制）
+
+- 修复安装 Microsoft 语言包后 Cursor 菜单、设置与 Agent 仍显示英文的问题，复用支持 Cursor 3.29.15 的 `polang233/cursor-language-pack` 1.1.5 源码构建。
+- 随桥接包分发完整安装器与 VSIX，保留上游的原始文件备份、校验更新、安装登记核对和冲突语言包移除流程。
+- 未适配的 Cursor 版本及未完成的汉化步骤直接报错；提示用户完整退出后重新打开 Cursor。
+- 安装测试继续使用隔离目录，已有明确的非中文显示语言保留。
+
 ## 0.2.7
 
 A toggle restarted Cursor to make it re-read `http.proxy`, which cost every open
@@ -142,3 +156,9 @@ Everything below was found on a machine where Magpie showed the agent as connect
 ## 0.1.0
 
 - Cursor protocol bridge through Magpie, background lifecycle, and recoverable proxy settings.
+# 0.2.8（本机定制）
+
+- 默认安装微软简体中文语言包，使用官方 Cursor CLI 和 JSONC 配置编辑。
+- Agent 名称与说明默认中文。
+- 模型菜单名称和上下文优先采用 Magpie 实时目录的元数据。
+- 启用状态下缺少模型或调用密钥时明确报错。

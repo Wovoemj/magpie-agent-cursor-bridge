@@ -1,109 +1,88 @@
-# Cursor · Magpie Bridge
+# Cursor · Magpie 桥接
 
-让 Cursor 编辑器直接使用 Magpie 中配置的全部模型与路由组。模型菜单返回 Magpie 模型目录，隐藏 Cursor 默认 Auto 入口，保留 Cursor 原有登录。
+|  |  |
+| --- | --- |
+| 仓库 | [932633145/magpie-agent-cursor-bridge](https://github.com/932633145/magpie-agent-cursor-bridge) |
+| 版本 | v0.3.0 |
+| 更新于 | 2026 年 11 月 25 日 |
+| 源码 | `D:\Codex会话\magpie-editor-bridges\magpie-agent-cursor-bridge` |
+| Magpie 里显示为 | **Cursor · Magpie 桥接**（Agents 页面） |
+| 安装 | `magpie plugin add npm:magpie-agent-cursor-bridge` |
 
-当前版本全面支持 **Windows (x64)** 与 **Apple Silicon / Intel macOS**。
+让 Cursor 直接使用 Magpie 里配置的全部模型与路由组。模型菜单返回 Magpie 实时完整目录，可以在 Cursor 内直接切换任意模型；隐藏 Cursor 自带的 Auto 入口，保留 Cursor 原有登录与订阅，不替换客户端、不改 `app.asar`。
 
----
+本机定制版本为 0.3.0，源码路径：`D:\Codex会话\magpie-editor-bridges\magpie-agent-cursor-bridge`。Magpie 的 Agents 页面显示 **Cursor · Magpie 桥接**。
 
-## 特性
+内置 [polang233/cursor-language-pack](https://github.com/polang233/cursor-language-pack) 1.3.0 完整汉化安装器，覆盖标准菜单、Cursor 设置与 Agent 界面，支持 `zh-cn` / `zh-tw` / `ja`；未指定显示语言时默认 `zh-cn`，已有的语言选择与 JSONC 注释原样保留。
 
-- **全平台支持**：针对 Windows 与 macOS 深度适配原生协议桥接核心，开箱即用。
-- **动态模型同步**：在 Magpie 中添加、切换或分组的模型，每 15 秒自动热同步至 Cursor 模型列表。
-- **无感代理接管**：连接时自动配置 Cursor 代理，断开连接或卸载时完整自动还原 Cursor 原有配置。
-- **安全与隐私**：所有 TLS 证书与回环代理均在本机生成，网络流量仅流经本机回环地址（`127.0.0.1`）至 Magpie 网关，不接触任何外部中转服务。
+思路与 `magpie-agent-raccoon-bridge`、`magpie-agent-trae-bridge` 一致，但按 Cursor 实际的取模方式来适配。
 
----
+## 为什么这里需要本地 TLS 代理
 
-### 安装方式
+小浣熊不需要代理，因为它的模型菜单由一份「模型方案」列表驱动，每条方案自带 `remoteBaseUrl` / `remoteApiKey` / `remoteModelId`——那是原生的自带端点通路。Cursor 不是这样：
 
-在 Magpie → **Plugins** 添加仓库地址安装：
+- Cursor 的对话流量被钉在厂商域名（`api2.cursor.sh` 一族），客户端只允许通过 `http.proxy` 改写出口；
+- 这个出口只接受 TLS，并且模型目录由 Cursor 自己按 `/v1/models` 的返回形状拉取；
+- 所以在 `127.0.0.1` 上起一个**只监听回环地址**的 TLS 中继，用本机自签的根证书接管这一段连接，只把上游 Host 重写到 Magpie 网关，其余流量原样直连。
+
+因此：不需要证书以外的东西、不碰 Cursor 登录、不引入任何外部中转服务，断开或卸载时按 journal 逐字节还原 Cursor 原来的代理设置。
+
+## 工作流
+
 ```text
-github:932633145/magpie-agent-cursor-bridge
+Magpie Agent 插件（cursor-bridge） → 在 Agents 页面选定模型 / 路由组 → 写 connection.json
+                                        ↓
+后台 supervisor（15s 心跳）
+ ├── 探测网关 GET /v1/models → 同步 Magpie 的模型与路由组
+ ├── 维护 Cursor settings.json 的 http.proxy（只写这一个键）
+ └── 断开 / 卸载时按 journal 还原，含托盘自启项
+                                        ↓
+Cursor ──[127.0.0.1 TLS 回环中继 + 本机根证书]──> 桥接引擎 ──[OpenAI 兼容]──> Magpie 网关 127.0.0.1:3425 ──> 各提供方
 ```
 
----
+- 数据目录：`%USERPROFILE%\.config\magpie-cursor-bridge\`（macOS 为 `~/.config/magpie-cursor-bridge/`）
+- 自启：Windows 走当前用户 Startup 目录无窗口后台执行；macOS 走用户级 `launchd` LaunchAgent。
 
-## 安装与快速上手
+## 中文界面
 
-### 前置条件
-- 已在本机安装 **Cursor** 与 **Magpie**。
-- 已在 Magpie 中添加并配置好至少一个可用模型或路由组。
+- 显示语言默认 `zh-cn`，且只在你没有明确选择语言时写入；已有 `locale` 一律尊重。
+- 语言包沿用上游安装器：备份原始程序文件、写补丁记录、安装并核对 VSIX、移除冲突的 Microsoft 语言包；步骤不完整时明确报错，而不是假装成功。
+- Cursor 版本不在语言包验证清单内（当前清单为 3.30.14）时给出警告并继续安装，新增文案可能仍显示英文。
+- 汉化需要**完全退出 Cursor 后重新打开**，重载窗口不足以加载全部语言资源；Cursor 每次升级后需重新执行一次安装。
 
----
+## 安装
 
-### Windows 系统使用步骤
+```text
+magpie plugin add npm:magpie-agent-cursor-bridge
+```
 
-1. **运行初始化**：
-   在插件目录下打开 PowerShell 执行初始化脚本（或直接双击运行 `setup.cmd`）：
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\setup.ps1
-   ```
-   *注：首次初始化时会检查并提示信任本机生成的本地根证书（系统标准确认窗口选择“是”即可）。*
+或在 Magpie → Plugins 里搜索 **Cursor · Magpie 桥接** 直接安装。
 
-2. **在 Magpie 中选择模型**：
-   - 打开 Magpie，在 **Agents** 页面找到 **Cursor · Magpie Bridge**。
-   - 打开开关，并从下拉列表中挑选您希望在 Cursor 中使用的模型或路由组。
+前置条件：本机已装 Cursor 与 Magpie，Magpie 里至少有一个可用模型或路由组，安装前先完整退出 Cursor。
 
-3. **在 Cursor 中刷新模型列表**：
-   - 首次开启后，后台桥接需要几十秒启动；等状态变为已连接即可。
-   - 打开对话面板，或点一下底部的模型下拉框——Cursor 会重新拉取模型表，Magpie 提供的模型随即出现，点击即可畅快对话。
-
-   > 无需重启 Cursor。模型目录是按请求下发的，只要 Cursor 重新发起一次拉取就会更新；
-   > 若列表没变，再点一次模型下拉框即可。重启也只是强制刷新的一种方式。
-
----
-
-### macOS 系统使用步骤
-
-1. **运行初始化**：
-   在终端中运行：
-   ```bash
-   bash setup.command
-   ```
-   *根据系统提示完成本地钥匙串证书信任授权。*
-
-2. **在 Magpie 中选择模型**：
-   - 在 Magpie → **Agents** 中开启 **Cursor · Magpie Bridge** 并选择模型。
-   - 等后台桥接启动完成（几十秒），在 Cursor 中打开对话面板或点一下模型下拉框即可看到 Magpie 的模型；无需重启 Cursor。
-
----
-
-## 常用管理命令
-
-| 操作 | Windows (PowerShell) | macOS / Linux (Bash) |
+| 操作 | Windows | macOS |
 | :--- | :--- | :--- |
-| **启动/更新服务** | `powershell -ExecutionPolicy Bypass -File setup.ps1` | `bash setup.command` |
-| **查看后台运行状态** | `powershell -ExecutionPolicy Bypass -File setup.ps1 status` | `bash setup.command status` |
-| **停用并卸载后台服务** | `powershell -ExecutionPolicy Bypass -File setup.ps1 uninstall` | `bash setup.command uninstall` |
+| 初始化 / 更新 | `powershell -ExecutionPolicy Bypass -File setup.ps1` | `bash setup.command` |
+| 查看状态 | `setup.ps1 status` | `setup.command status` |
+| 卸载并还原 | `setup.ps1 uninstall` | `setup.command uninstall` |
 
-- **断开连接**：在 Magpie 的 Agents 页面选择 Disconnect，或在终端执行 `magpie cursor-bridge default`。
-- **代理自愈与还原**：当桥接服务退出或在 Magpie 中断开连接时，Cursor 的代理配置会自动恢复为初始状态。
+首次初始化会请求信任本机生成的根证书（系统标准确认窗口里选「是」/「始终信任」）。随后在 Magpie 的 Agents 页面打开 **Cursor · Magpie 桥接** 并选择模型，等状态变为已连接，回到 Cursor 点一下模型下拉框即可看到 Magpie 的模型，无需重启。
 
----
+## 兼容性
 
-## 架构与工作流程
+| 项目 | 范围 |
+| --- | --- |
+| 平台 | Windows x64、Apple Silicon macOS |
+| Cursor | 3.29 – 3.31 实测可用；语言包上游验证到 3.30.14 |
+| Magpie | OpenAI 兼容网关，默认 `127.0.0.1:3425` |
+| 中文包 | 1.3.0（`zh-cn` / `zh-tw` / `ja`） |
 
-```text
-Magpie Agent 插件 → 写入私有连接配置 (connection.json)
-                                ↓
-                      后台监视器 (Supervisor)
-                      ├─ 启停原生桥接引擎 (cursor-magpie-bridge)
-                      └─ 自动维护/还原 Cursor 代理设置 (settings.json)
-                                ↓
-Cursor 编辑器 ──[本地 TLS 回环代理]──> 原生桥接服务 ──[OpenAI 协议兼容]──> 本地 Magpie 网关 ──> 大模型提供商
-```
+## 常见问题
 
-- **配置与数据隔离目录**：
-  - Windows: `%USERPROFILE%\.config\magpie-cursor-bridge\`
-  - macOS: `~/.config/magpie-cursor-bridge/`
-- **运行产物与自启**：
-  - Windows: 自启通过当前用户 Startup 目录无窗口后台执行。
-  - macOS: 通过 `launchd` 用户 LaunchAgent 守护。
+- **模型列表没更新**：后台同步每 15 秒一轮，首次启动需等几十秒；再点一次模型下拉框即可，重启只是强制刷新的一种方式。
+- **界面仍有英文**：确认已完全退出 Cursor（含残留后台进程）后重开；或确认安装的是 1.3.0 语言包。
+- **网关没启动**：中继对非 Magpie 流量直连放行，Cursor 自身功能不受影响，只是 Magpie 模型不可用。
 
----
+## 协议
 
-## 开源协议
-
-本项目核心遵循 [MIT License](LICENSE)。
-部分原生协议核心来源于开源项目 cursor-byok（MIT License）。
+本项目遵循 [MIT License](LICENSE)。原生协议核心来源于 cursor-byok（MIT License）；中文语言包来源于 polang233/cursor-language-pack，版权归其作者所有，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -19,29 +19,20 @@ const engine=path.join(source,binName);
 const temp=t=>{
   const base=workingTemp();
   const p=fs.mkdtempSync(path.join(base,'bridge-install-test-'));
-  t.after(()=>fs.rmSync(p,{recursive:true,force:true}));
+  // Windows can briefly retain executable handles after the version probe.
+  // Use Node's bounded deletion retries and still fail if the files stay locked.
+  t.after(()=>fs.promises.rm(p,{recursive:true,force:true,maxRetries:8,retryDelay:100}));
   return p;
 };
-// Some sandboxes allow no writes to the OS temp directory; the native engine
-// then fails opening its data directory, which says nothing about the plugin.
-// The check runs the engine itself, because a directory can be writable by Node
-// and still be refused a certificate store.
-let fallbackBase=null;
-process.on('exit',()=>{try{if(fallbackBase) fs.rmSync(fallbackBase,{recursive:true,force:true});}catch{}});
-const engineUsable=dir=>{
-  try {
-    const probe=path.join(dir,`.bridge-ca-${process.pid}`);
-    const result=spawnSync(engine,['--init-ca'],{encoding:'utf8',env:{...process.env,CURSOR_BYOK_DATA_DIR:probe}});
-    fs.rmSync(probe,{recursive:true,force:true});
-    return result.status===0;
-  } catch { return false; }
-};
+// Keep executable fixtures in the explicitly writable project, rather than
+// inferring deletion permission from a successful CA write in the OS temp dir.
+let scratchBase=null;
+after(async ()=>{
+  if(scratchBase) await fs.promises.rm(scratchBase,{recursive:true,force:true,maxRetries:8,retryDelay:100});
+});
 const workingTemp=()=>{
-  if(engineUsable(path.join(os.tmpdir(),`.bridge-check-${process.pid}`))) return os.tmpdir();
-  // A sandboxed profile can refuse both the OS temp dir and its parent; the
-  // workspace itself is the only fully writable tree left.
-  if(!fallbackBase) fallbackBase=fs.mkdtempSync(path.join(source,'.bridge-tmp-'));
-  return fallbackBase;
+  if(!scratchBase) scratchBase=fs.mkdtempSync(path.join(source,'.bridge-tmp-'));
+  return scratchBase;
 };
 export const TEST_SCRATCH='.bridge-tmp-';
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');

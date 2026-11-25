@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {atomic,restoreProxy} from './lib/settings.js';
 import {paths,run,verifyPackage,initializeCertificate,stage,activate,stopJob,label} from './lib/install.js';
+import {defaultChineseLocale,findCursorExecutable,installChineseLanguagePack} from './lib/locale.js';
 const source=path.dirname(fileURLToPath(import.meta.url));
 const manifest=JSON.parse(fs.readFileSync(path.join(source,'package.json'),'utf8'));
 const command=process.argv[2]||'setup';
@@ -76,6 +77,15 @@ try {
         console.log('后台已卸载，Cursor 代理已还原。若从 Magpie 插件页安装，请同时移除该插件。证书、数据及恢复记录保留。');
       } else {
         verifyPackage(source);
+        const argvFile = rooted ? path.join(rooted, 'Cursor/argv.json') : path.join(p.home, '.cursor/argv.json');
+        const locale = defaultChineseLocale(argvFile);
+        // A rooted install is explicitly isolated from the user's editor profile.
+        const chineseLocale = locale.locale.toLowerCase();
+        if (!rooted && ['zh-cn', 'zh-tw'].includes(chineseLocale)) {
+          const installed = installChineseLanguagePack(findCursorExecutable(run), run, { locale: chineseLocale });
+          console.log(installed.stdout.trim());
+        }
+        console.log(`Cursor 显示语言：${locale.locale}（完全退出 Cursor 后重新打开生效）`);
         const isWin = process.platform === 'win32';
         const enginePath = path.join(source, 'bin', isWin ? 'cursor-magpie-bridge.exe' : 'cursor-magpie-bridge');
         initializeCertificate(enginePath, p);
@@ -96,7 +106,7 @@ try {
         }
         await activate(p,release,domain);
         atomic(path.join(p.root,'installation.json'),JSON.stringify({version:manifest.version,release,source,installed:new Date().toISOString()},null,2));
-        console.log(`已成功安装并启动 v${manifest.version}。在 Magpie → Agents 选择 Cursor · Magpie Bridge 和模型；首次连接后重启 Cursor 即可开始使用。`);
+        console.log(`已成功安装并启动 v${manifest.version}。在 Magpie → Agents 选择 Cursor · Magpie 桥接和模型；完全退出 Cursor 后重新打开，即可使用中文界面与 Magpie 模型目录。`);
       }
     } finally {
       try { fs.rmdirSync(lock); } catch {}
