@@ -1,88 +1,28 @@
-# Cursor · Magpie 桥接
+# Cursor 原生模型（中文） · Magpie 热切换
 
-|  |  |
+在 **Magpie → Agents → Cursor 原生模型（中文）** 选择模型，已经打开的 Cursor 聊天不用重启，也不用在 Cursor 再选一遍。不使用 `ask_magpie`、代理、流量拦截或根证书。
+
+[下载 v0.6.0](https://github.com/Wovoemj/magpie-agent-cursor-bridge/releases/tag/v0.6.0) · [版本记录](CHANGELOG.md) · [第三方许可](THIRD_PARTY_NOTICES.md)
+
+| 你在 Magpie 的操作 | 已打开的 Cursor 聊天 |
 | --- | --- |
-| 仓库 | [Wovoemj/magpie-agent-cursor-bridge](https://github.com/Wovoemj/magpie-agent-cursor-bridge) |
-| 版本 | v0.3.0 |
-| 更新于 | 2026 年 11 月 25 日 |
-| 源码 | `D:\Codex会话\magpie-editor-bridges\magpie-agent-cursor-bridge` |
-| Magpie 里显示为 | **Cursor · Magpie 桥接**（Agents 页面） |
-| 安装 | `magpie plugin add npm:magpie-agent-cursor-bridge` |
+| 打开开关，选 A | 切到 A；首次接管前只问一次，关闭时要切回哪个 Cursor 模型。取消不会改变当前模型。 |
+| 从 A 改为 B | 下一条新请求改用 B。在途回复不迁移。使用固定模型组时，Cursor 菜单显示同一个组 ID，不随成员改名。 |
+| 关闭开关或选“默认” | 切回你指定的 Cursor 原生模型并停止跟随。不会把“关闭”擅自理解成 Auto，也不会清除你原有的 BYOK 设置。 |
 
-让 Cursor 直接使用 Magpie 里配置的全部模型与路由组。模型菜单返回 Magpie 实时完整目录，可以在 Cursor 内直接切换任意模型；隐藏 Cursor 自带的 Auto 入口，保留 Cursor 原有登录与订阅，不替换客户端、不改 `app.asar`。
+## 首次接入（Windows）
 
-本机定制版本为 0.3.0，源码路径：`D:\Codex会话\magpie-editor-bridges\magpie-agent-cursor-bridge`。Magpie 的 Agents 页面显示 **Cursor · Magpie 桥接**。
+1. 从发布页下载 `magpie-agent-cursor-bridge-0.6.0.tgz`，解压到你准备长期保留的空目录，在解压出的 `package` 目录运行 `magpie plugin add .`。在 Cursor 的扩展菜单选择 **从 VSIX 安装**，打开 `assets/magpie-cursor-native-models-0.6.0.vsix`。如需简体中文，再安装同目录的 `cursor-language-pack-1.3.0.vsix`；已有中文不用重装。首次安装若提示重载窗口，按提示操作；之后切模型不用重载。这种安装方式不依赖 npm 搜索。
+2. **先核对地址。** 普通 Cursor 的[原生 BYOK 请求经过 Cursor 后端](https://cursor.com/help/models-and-usage/api-keys)。需要一个你控制、Cursor 可访问的 **Magpie HTTPS `/v1` 网关**和一个单独配发的受限密钥。只有本机回环或局域网地址不够；已经在 Magpie 配好的供应商密钥不用重填。插件不创建公网入口、不接触供应商密钥、不自动覆盖 Cursor 的地址或密钥。
+3. 在 Cursor 命令面板运行一次 **Magpie：配置原生模型**。同意后助手在 Magpie 创建专用的单成员模型组，并复制它的 `group/cursor-hot-…` ID。到 **Cursor Settings → Models** 手动设置兼容网关与专用密钥，再用 **Add Custom Model** 添加这个固定 ID **一次**；以后无需逐个添加 A、B。关闭时建议选择不经过这个 BYOK 出口的 Cursor 原生模型。
+4. 保持一个原生聊天打开，回到 Magpie 打开开关、选择模型。首次在 Cursor 选择关闭时使用的模型（Auto 或具体 ID），之后可以一直留在 Magpie 切 A/B。已在 Cursor 添加过各模型 ID 的旧配置也可直接跟随，不创建模型组；没有添加、被组织禁用或不兼容的 ID 不能保证可用。
 
-内置 [polang233/cursor-language-pack](https://github.com/polang233/cursor-language-pack) 1.3.0 完整汉化安装器，覆盖标准菜单、Cursor 设置与 Agent 界面，支持 `zh-cn` / `zh-tw` / `ja`；未指定显示语言时默认 `zh-cn`，已有的语言选择与 JSONC 注释原样保留。
+只跟随最近使用的 Cursor 窗口；有并排聊天或没有打开的聊天时暂停，不自动创建聊天。实际切回的对象是首次指定的模型，不是从私人聊天或数据库猜出的上一个模型；不会回滚第三方密钥或尽力重播已经发送的消息。修改该选项使用 **Magpie：设置关闭时使用的 Cursor 模型**。已开始的接管使用当时记录的返回模型。
 
-思路与 `magpie-agent-raccoon-bridge`、`magpie-agent-trae-bridge` 一致，但按 Cursor 实际的取模方式来适配。
+**从 0.3.x 升级：** 如果启用过旧版，先在 Magpie 关闭旧的 Agent，并按原版本的卸载说明恢复原设置，再启用本版。安装新版不会自动清理旧代理或证书，也不会重启你的 Cursor。旧版源码保留在历史标签，不随 0.6.0 分发。
 
-## 为什么这里需要本地 TLS 代理
+## 验证及边界
 
-小浣熊不需要代理，因为它的模型菜单由一份「模型方案」列表驱动，每条方案自带 `remoteBaseUrl` / `remoteApiKey` / `remoteModelId`——那是原生的自带端点通路。Cursor 不是这样：
-
-- Cursor 的对话流量被钉在厂商域名（`api2.cursor.sh` 一族），客户端只允许通过 `http.proxy` 改写出口；
-- 这个出口只接受 TLS，并且模型目录由 Cursor 自己按 `/v1/models` 的返回形状拉取；
-- 所以在 `127.0.0.1` 上起一个**只监听回环地址**的 TLS 中继，用本机自签的根证书接管这一段连接，只把上游 Host 重写到 Magpie 网关，其余流量原样直连。
-
-因此：不需要证书以外的东西、不碰 Cursor 登录、不引入任何外部中转服务，断开或卸载时按 journal 逐字节还原 Cursor 原来的代理设置。
-
-## 工作流
-
-```text
-Magpie Agent 插件（cursor-bridge） → 在 Agents 页面选定模型 / 路由组 → 写 connection.json
-                                        ↓
-后台 supervisor（15s 心跳）
- ├── 探测网关 GET /v1/models → 同步 Magpie 的模型与路由组
- ├── 维护 Cursor settings.json 的 http.proxy（只写这一个键）
- └── 断开 / 卸载时按 journal 还原，含托盘自启项
-                                        ↓
-Cursor ──[127.0.0.1 TLS 回环中继 + 本机根证书]──> 桥接引擎 ──[OpenAI 兼容]──> Magpie 网关 127.0.0.1:3425 ──> 各提供方
-```
-
-- 数据目录：`%USERPROFILE%\.config\magpie-cursor-bridge\`（macOS 为 `~/.config/magpie-cursor-bridge/`）
-- 自启：Windows 走当前用户 Startup 目录无窗口后台执行；macOS 走用户级 `launchd` LaunchAgent。
-
-## 中文界面
-
-- 显示语言默认 `zh-cn`，且只在你没有明确选择语言时写入；已有 `locale` 一律尊重。
-- 语言包沿用上游安装器：备份原始程序文件、写补丁记录、安装并核对 VSIX、移除冲突的 Microsoft 语言包；步骤不完整时明确报错，而不是假装成功。
-- Cursor 版本不在语言包验证清单内（当前清单为 3.30.14）时给出警告并继续安装，新增文案可能仍显示英文。
-- 汉化需要**完全退出 Cursor 后重新打开**，重载窗口不足以加载全部语言资源；Cursor 每次升级后需重新执行一次安装。
-
-## 安装
-
-```text
-magpie plugin add npm:magpie-agent-cursor-bridge
-```
-
-或在 Magpie → Plugins 里搜索 **Cursor · Magpie 桥接** 直接安装。
-
-前置条件：本机已装 Cursor 与 Magpie，Magpie 里至少有一个可用模型或路由组，安装前先完整退出 Cursor。
-
-| 操作 | Windows | macOS |
-| :--- | :--- | :--- |
-| 初始化 / 更新 | `powershell -ExecutionPolicy Bypass -File setup.ps1` | `bash setup.command` |
-| 查看状态 | `setup.ps1 status` | `setup.command status` |
-| 卸载并还原 | `setup.ps1 uninstall` | `setup.command uninstall` |
-
-首次初始化会请求信任本机生成的根证书（系统标准确认窗口里选「是」/「始终信任」）。随后在 Magpie 的 Agents 页面打开 **Cursor · Magpie 桥接** 并选择模型，等状态变为已连接，回到 Cursor 点一下模型下拉框即可看到 Magpie 的模型，无需重启。
-
-## 兼容性
-
-| 项目 | 范围 |
-| --- | --- |
-| 平台 | Windows x64、Apple Silicon macOS |
-| Cursor | 3.29 – 3.31 实测可用；语言包上游验证到 3.30.14 |
-| Magpie | OpenAI 兼容网关，默认 `127.0.0.1:3425` |
-| 中文包 | 1.3.0（`zh-cn` / `zh-tw` / `ja`） |
-
-## 常见问题
-
-- **模型列表没更新**：后台同步每 15 秒一轮，首次启动需等几十秒；再点一次模型下拉框即可，重启只是强制刷新的一种方式。
-- **界面仍有英文**：确认已完全退出 Cursor（含残留后台进程）后重开；或确认安装的是 1.3.0 语言包。
-- **网关没启动**：中继对非 Magpie 流量直连放行，Cursor 自身功能不受影响，只是 Magpie 模型不可用。
-
-## 协议
-
-本项目遵循 [MIT License](LICENSE)。原生协议核心来源于 cursor-byok（MIT License）；中文语言包来源于 polang233/cursor-language-pack，版权归其作者所有，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 插件读取 Magpie 自己写出的 `~/.config/magpie-cursor-native/selection.json`。开启、切换、默认、缺失文件和原子替换都会处理。无效或不完整的文件不作断开处理。
+- Cursor 状态栏里的模型名是控制状态，**不是推理回执**。可在你自己的可达网关上发一条无敏感信息的新问题，对照 Magpie 用量明细的时间、实际供应商及模型。Tab 补全、其他聊天窗口、已经开始的生成不在范围内。
+- 在源码目录运行 `npm test` 可重复离线测试。已在 Cursor 3.31.15 / Magpie 0.1.4572 的隔离配置中读回同一聊天的 A → B → 指定原生模型，并向本地测试供应商验证固定组分别返回 A、B。未通过真实 Cursor 原生聊天向线上供应商发送请求。`test/cursor-smoke.cjs` 使用的测试只读接口不在正式插件中；插件不读取聊天正文。GitHub 公开发行不等于已被 Magpie 插件搜索收录。

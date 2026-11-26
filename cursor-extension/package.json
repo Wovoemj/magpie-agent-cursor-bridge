@@ -1,0 +1,26 @@
+{
+  "name": "cursor-native-models",
+  "displayName": "Magpie · Cursor 原生模型",
+  "description": "跟随 Magpie Agents 热切换当前 Cursor 原生聊天的模型；关闭切回指定原生模型。不使用 MCP。",
+  "publisher": "magpie-local",
+  "version": "0.6.0",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "main": "./extension.cjs",
+  "activationEvents": ["onStartupFinished"],
+  "categories": ["Other"],
+  "capabilities": { "untrustedWorkspaces": { "supported": true }, "virtualWorkspaces": { "supported": false } },
+  "extensionKind": ["ui"],
+  "contributes": {
+    "configuration": { "title": "Magpie · Cursor", "properties": {
+      "magpieCursorNative.returnModel": { "type": "string", "scope": "application", "default": "", "description": "关闭时切回的 Cursor 原生模型 ID（Auto 为 default）；留空时首次接管会询问，不猜测原模型。" },
+      "magpieCursorNative.magpieExecutable": { "type": "string", "scope": "application", "default": "", "description": "可选：本机已安装的 Magpie CLI 的绝对路径。默认查找 Windows 用户安装位置。" }
+    } },
+    "commands": [
+      { "command": "magpieCursorNative.configure", "title": "Magpie：配置原生模型" },
+      { "command": "magpieCursorNative.returnModel", "title": "Magpie：设置关闭时使用的 Cursor 模型" },
+      { "command": "magpieCursorNative.status", "title": "Magpie：查看热切换状态" },
+      { "command": "magpieCursorNative.switch", "title": "Magpie：重新同步当前聊天模型" }
+    ]
+  }
+}
