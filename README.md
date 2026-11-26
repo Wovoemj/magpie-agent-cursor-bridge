@@ -2,7 +2,7 @@
 
 |  |  |
 | --- | --- |
-| 仓库 | [932633145/magpie-agent-cursor-bridge](https://github.com/932633145/magpie-agent-cursor-bridge) |
+| 仓库 | [Wovoemj/magpie-agent-cursor-bridge](https://github.com/Wovoemj/magpie-agent-cursor-bridge) |
 | 版本 | v0.3.0 |
 | 更新于 | 2026 年 11 月 25 日 |
 | 源码 | `D:\Codex会话\magpie-editor-bridges\magpie-agent-cursor-bridge` |
